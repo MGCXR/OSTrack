@@ -19,6 +19,7 @@ def parse_args():
     parser.add_argument('--script_prv', type=str, help='training script name')
     parser.add_argument('--config_prv', type=str, default='baseline', help='yaml configure file name')
     parser.add_argument('--use_wandb', type=int, choices=[0, 1], default=0)  # whether to use wandb
+    # parser.add_argument('--local_rank', type=int, default=-1)
     # for knowledge distillation
     parser.add_argument('--distill', type=int, choices=[0, 1], default=0)  # whether to use knowledge distillation
     parser.add_argument('--script_teacher', type=str, help='teacher script name')

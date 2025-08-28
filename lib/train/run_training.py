@@ -36,7 +36,7 @@ def run_training(script_name, config_name, cudnn_benchmark=True, local_rank=-1, 
         print("save_dir dir is not given. Use the default dir instead.")
     # This is needed to avoid strange crashes related to opencv
     cv.setNumThreads(0)
-
+    
     torch.backends.cudnn.benchmark = cudnn_benchmark
 
     print('script_name: {}.py  config_name: {}.yaml'.format(script_name, config_name))
@@ -47,7 +47,7 @@ def run_training(script_name, config_name, cudnn_benchmark=True, local_rank=-1, 
             init_seeds(base_seed + local_rank)
         else:
             init_seeds(base_seed)
-
+    
     settings = ws_settings.Settings()
     settings.script_name = script_name
     settings.config_name = config_name
@@ -80,7 +80,7 @@ def main():
     parser.add_argument('--script', type=str, required=True, help='Name of the train script.')
     parser.add_argument('--config', type=str, required=True, help="Name of the config file.")
     parser.add_argument('--cudnn_benchmark', type=bool, default=True, help='Set cudnn benchmark on (1) or off (0) (default is on).')
-    parser.add_argument('--local_rank', default=-1, type=int, help='node rank for distributed training')
+    parser.add_argument('--local-rank', default=-1, type=int, help='node rank for distributed training')
     parser.add_argument('--save_dir', type=str, help='the directory to save checkpoints and logs')
     parser.add_argument('--seed', type=int, default=42, help='seed for random numbers')
     parser.add_argument('--use_lmdb', type=int, choices=[0, 1], default=0)  # whether datasets are in lmdb format
@@ -91,11 +91,12 @@ def main():
     parser.add_argument('--distill', type=int, choices=[0, 1], default=0)  # whether to use knowledge distillation
     parser.add_argument('--script_teacher', type=str, help='teacher script name')
     parser.add_argument('--config_teacher', type=str, help='teacher yaml configure file name')
-
+    
     args = parser.parse_args()
     if args.local_rank != -1:
         dist.init_process_group(backend='nccl')
         torch.cuda.set_device(args.local_rank)
+        
     else:
         torch.cuda.set_device(0)
     run_training(args.script, args.config, cudnn_benchmark=args.cudnn_benchmark,

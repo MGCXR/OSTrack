@@ -2,9 +2,9 @@ import torch
 import torch.utils.data.dataloader
 import importlib
 import collections
-from torch._six import string_classes
+# from torch._six import string_classes
 from lib.utils import TensorDict, TensorList
-
+string_classes = (str,)
 if float(torch.__version__[:3]) >= 1.9 or len('.'.join((torch.__version__).split('.')[0:2])) > 3:
     int_classes = int
 else:
@@ -82,9 +82,10 @@ def ltr_collate_stack1(batch):
             # If we're in a background process, concatenate directly into a
             # shared memory tensor to avoid an extra copy
             numel = sum([x.numel() for x in batch])
-            storage = batch[0].storage()._new_shared(numel)
+            storage = batch[0].untyped_storage()._new_shared(numel)
             out = batch[0].new(storage)
-        return torch.stack(batch, 1, out=out)
+           
+        return torch.stack(batch, 1)
         # if batch[0].dim() < 4:
         #     return torch.stack(batch, 0, out=out)
         # return torch.cat(batch, 0, out=out)
