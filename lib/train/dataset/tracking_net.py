@@ -23,11 +23,11 @@ def list_sequences(root, set_ids):
     """
     sequence_list = []
 
-    
-    anno_dir = os.path.join(root, "TRAIN_0", "anno")
+    for s in set_ids:
+        anno_dir = os.path.join(root, "TRAIN_" + str(s), "anno")
 
-    sequences_cur_set = [(0, os.path.splitext(f)[0]) for f in os.listdir(anno_dir) if f.endswith('.txt')]
-    sequence_list += sequences_cur_set
+        sequences_cur_set = [(s, os.path.splitext(f)[0]) for f in os.listdir(anno_dir) if f.endswith('.txt')]
+        sequence_list += sequences_cur_set
 
     return sequence_list
 
@@ -57,8 +57,8 @@ class TrackingNet(BaseVideoDataset):
         super().__init__('TrackingNet', root, image_loader)
 
         if set_ids is None:
-            set_ids = [i for i in range(12)]
-           
+            set_ids = [i for i in range(3)]
+            # set_ids = 1
 
         self.set_ids = set_ids
 
@@ -104,7 +104,7 @@ class TrackingNet(BaseVideoDataset):
     def _read_bb_anno(self, seq_id):
         set_id = self.sequence_list[seq_id][0]
         vid_name = self.sequence_list[seq_id][1]
-        bb_anno_file = os.path.join(self.root, "TRAIN_0", "anno", vid_name + ".txt")
+        bb_anno_file = os.path.join(self.root, "TRAIN_" + str(set_id), "anno", vid_name + ".txt")
         gt = pandas.read_csv(bb_anno_file, delimiter=',', header=None, dtype=np.float32, na_filter=False,
                              low_memory=False).values
         return torch.tensor(gt)
@@ -119,7 +119,7 @@ class TrackingNet(BaseVideoDataset):
     def _get_frame(self, seq_id, frame_id):
         set_id = self.sequence_list[seq_id][0]
         vid_name = self.sequence_list[seq_id][1]
-        frame_path = os.path.join(self.root, "TRAIN_0", "frames", vid_name, str(frame_id) + ".jpg")
+        frame_path = os.path.join(self.root, "TRAIN_" + str(set_id), "frames", vid_name, str(frame_id) + ".jpg")
         return self.image_loader(frame_path)
 
     def _get_class(self, seq_id):
