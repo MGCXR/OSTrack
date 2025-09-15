@@ -57,7 +57,7 @@ class TrackingNet(BaseVideoDataset):
         super().__init__('TrackingNet', root, image_loader)
 
         if set_ids is None:
-            set_ids = [i for i in range(3)]
+            set_ids = [i for i in range(5)]
             # set_ids = 1
 
         self.set_ids = set_ids
