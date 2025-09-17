@@ -3,7 +3,7 @@ import torchvision.transforms as transforms
 from lib.utils import TensorDict
 import lib.train.data.processing_utils as prutils
 import torch.nn.functional as F
-
+import numpy as np
 
 def stack_tensors(x):
     if isinstance(x, (list, tuple)) and isinstance(x[0], torch.Tensor):
@@ -92,12 +92,13 @@ class STARKProcessing(BaseProcessing):
                 'template_images', 'search_images', 'template_anno', 'search_anno', 'test_proposals', 'proposal_iou'
         """
         # Apply joint transforms
+        
         if self.transform['joint'] is not None:
             data['template_images'], data['template_anno'], data['template_masks'] = self.transform['joint'](
                 image=data['template_images'], bbox=data['template_anno'], mask=data['template_masks'])
             data['search_images'], data['search_anno'], data['search_masks'] = self.transform['joint'](
                 image=data['search_images'], bbox=data['search_anno'], mask=data['search_masks'], new_roll=False)
-
+        
         for s in ['template', 'search']:
             assert self.mode == 'sequence' or len(data[s + '_images']) == 1, \
                 "In pair mode, num train/test frames must be 1"
@@ -107,21 +108,35 @@ class STARKProcessing(BaseProcessing):
 
             # 2021.1.9 Check whether data is valid. Avoid too small bounding boxes
             w, h = torch.stack(jittered_anno, dim=0)[:, 2], torch.stack(jittered_anno, dim=0)[:, 3]
-
+            
             crop_sz = torch.ceil(torch.sqrt(w * h) * self.search_area_factor[s])
             if (crop_sz < 1).any():
                 data['valid'] = False
                 # print("Too small box is found. Replace it with new data.")
                 return data
-
+            # if isinstance(data[s + '_images'][0], np.ndarray):
+            #     print("data_name",data["dataset"])
+            #     print("s",s)
+            #     print("datashape",data[s + '_images'][0].shape)
+            # if isinstance(data[s + '_images'][0], list) :
+            #     print("data_name",data["dataset"])
+            #     print("s",s)
+            #     print("datashape",len(data[s + '_images'][0]))
+                
             # Crop image region centered at jittered_anno box and get the attention mask
             crops, boxes, att_mask, mask_crops = prutils.jittered_center_crop(data[s + '_images'], jittered_anno,
                                                                               data[s + '_anno'], self.search_area_factor[s],
-                                                                              self.output_sz[s], masks=data[s + '_masks'])
+                                                                              self.output_sz[s], masks=data[s + '_masks'],dataset=data["dataset"])
+           
             # Apply transforms
-            data[s + '_images'], data[s + '_anno'], data[s + '_att'], data[s + '_masks'] = self.transform[s](
-                image=crops, bbox=boxes, att=att_mask, mask=mask_crops, joint=False)
-
+            if data["dataset"]=="visevent":
+                data[s + '_images'], data[s + '_anno'], data[s + '_att'], data[s + '_masks'] = self.transform[s](
+                image=crops, bbox=boxes, att=att_mask, mask=mask_crops)
+            else:
+                data[s + '_images'], data[s + '_anno'], data[s + '_att'], data[s + '_masks'] = self.transform[s](
+                    image=crops, bbox=boxes, att=att_mask, mask=mask_crops, joint=False)
+            
+            # if isinstance(data[s + '_images'][0], torch.Tensor):
             # 2021.1.9 Check whether elements in data[s + '_att'] is all 1
             # Note that type of data[s + '_att'] is tuple, type of ele is torch.tensor
             for ele in data[s + '_att']:
@@ -139,7 +154,7 @@ class STARKProcessing(BaseProcessing):
                     # print("Values of down-sampled attention mask are all one. "
                     #       "Replace it with new data.")
                     return data
-
+        
         data['valid'] = True
         # if we use copy-and-paste augmentation
         if data["template_masks"] is None or data["search_masks"] is None:
@@ -150,5 +165,5 @@ class STARKProcessing(BaseProcessing):
             data = data.apply(stack_tensors)
         else:
             data = data.apply(lambda x: x[0] if isinstance(x, list) else x)
-
+        
         return data

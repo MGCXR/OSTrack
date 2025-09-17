@@ -169,17 +169,14 @@ class TrackingSampler(torch.utils.data.Dataset):
                                    'dataset': dataset.get_name(),
                                    'test_class': meta_obj_test.get('object_class_name')})
                 # make data augmentation
+                
                 # print("before processing, template_frames", type(data['template_images']), type(data['search_images']))
                 data = self.processing(data)
-                print("after processing, template_frames", type(data['template_images']), type(data['search_images']))
-                print("after processing, template_frames", len(data['template_images']), len(data['search_images']))
-                print("after processing, template_frames[0]", type(data['template_images'][0]), type(data['search_images'][0]))
-                print("after processing, template_frames[0]",len(data['template_images'][0]), len(data['search_images'][0]))
                 # check whether data is valid
                 valid = data['valid']
             except:
                 valid = False
-
+        
         return data
 
     def getitem_cls(self):

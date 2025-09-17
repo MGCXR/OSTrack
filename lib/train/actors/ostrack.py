@@ -27,7 +27,9 @@ class OSTrackActor(BaseActor):
             loss    - the training loss
             status  -  dict containing detailed losses
         """
+        
         # forward pass
+        
         out_dict = self.forward_pass(data)
 
         # compute losses
@@ -37,9 +39,13 @@ class OSTrackActor(BaseActor):
 
     def forward_pass(self, data):
         # currently only support 1 template and 1 search region
-        assert len(data['template_images']) == 1
-        assert len(data['search_images']) == 1
-
+        if data['dataset'][0] == "visevent":
+            assert len(data['template_images']) == 2
+            assert len(data['search_images']) == 2
+        else:
+            assert len(data['template_images']) == 1
+            assert len(data['search_images']) == 1
+        
         template_list = []
         for i in range(self.settings.num_template):
             template_img_i = data['template_images'][i].view(-1,

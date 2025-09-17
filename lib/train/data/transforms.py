@@ -42,6 +42,7 @@ class Transform:
 
     def __call__(self, **inputs):
         var_names = [k for k in inputs.keys() if k in self._valid_inputs]
+        
         for v in inputs.keys():
             if v not in self._valid_all:
                 raise ValueError('Incorrect input \"{}\" to transform. Only supports inputs {} and arguments {}.'.format(v, self._valid_inputs, self._valid_args))
@@ -54,12 +55,13 @@ class Transform:
             return tuple(list(o) for o in out)
 
         out = {k: v for k, v in inputs.items() if k in self._valid_inputs}
-
+        
         for t in self.transforms:
             out = t(**out, joint=joint_mode, new_roll=new_roll)
         if len(var_names) == 1:
             return out[var_names[0]]
         # Make sure order is correct
+        
         return tuple(out[v] for v in var_names)
 
     def _split_inputs(self, inputs):
@@ -116,8 +118,10 @@ class TransformBase:
                     params = self._rand_params
                 if isinstance(var, (list, tuple)):
                     outputs[var_name] = [transform_func(x, *params) for x in var]
-                else:
+                    # print("outputs_type", type(outputs['image'][0]))
+                else: 
                     outputs[var_name] = transform_func(var, *params)
+        
         return outputs
 
     def _get_image_size(self, inputs):
@@ -128,6 +132,8 @@ class TransformBase:
                 break
         if im is None:
             return None
+        if isinstance(im, (list, tuple)):
+            im = im[0]
         if isinstance(im, (list, tuple)):
             im = im[0]
         if isinstance(im, np.ndarray):

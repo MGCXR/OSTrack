@@ -78,7 +78,7 @@ class LTRTrainer(BaseTrainer):
                 data = data.to(self.device)
 
             self.data_to_gpu_time = time.time()
-
+            
             data['epoch'] = self.epoch
             data['settings'] = self.settings
             # forward pass
