@@ -148,8 +148,15 @@ class TrackingSampler(torch.utils.data.Dataset):
             try:
                 template_frames, template_anno, meta_obj_train = dataset.get_frames(seq_id, template_frame_ids, seq_info_dict)
                 search_frames, search_anno, meta_obj_test = dataset.get_frames(seq_id, search_frame_ids, seq_info_dict)
-
-                H, W, _ = template_frames[0].shape
+                # print("template_frames",type(template_frames), type(search_frames))
+                # print("template_frames",len(template_frames), len(search_frames))
+                # print("template_frames[0]",type(template_frames[0]), type(search_frames[0]))
+                # print("template_frames[0]",len(template_frames[0]), len(search_frames[0]))
+                if dataset.get_name() == "visevent":
+                    H, W , _ = template_frames[0][0].shape
+                else:
+                    H, W, _ = template_frames[0].shape
+                # print("H, W", H, W)
                 template_masks = template_anno['mask'] if 'mask' in template_anno else [torch.zeros((H, W))] * self.num_template_frames
                 search_masks = search_anno['mask'] if 'mask' in search_anno else [torch.zeros((H, W))] * self.num_search_frames
 
@@ -162,8 +169,12 @@ class TrackingSampler(torch.utils.data.Dataset):
                                    'dataset': dataset.get_name(),
                                    'test_class': meta_obj_test.get('object_class_name')})
                 # make data augmentation
+                # print("before processing, template_frames", type(data['template_images']), type(data['search_images']))
                 data = self.processing(data)
-
+                print("after processing, template_frames", type(data['template_images']), type(data['search_images']))
+                print("after processing, template_frames", len(data['template_images']), len(data['search_images']))
+                print("after processing, template_frames[0]", type(data['template_images'][0]), type(data['search_images'][0]))
+                print("after processing, template_frames[0]",len(data['template_images'][0]), len(data['search_images'][0]))
                 # check whether data is valid
                 valid = data['valid']
             except:

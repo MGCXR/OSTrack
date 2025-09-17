@@ -82,7 +82,7 @@ class VisEvent(BaseVideoDataset):
         seq_path = self._get_sequence_path(seq_id)
         
         frame_list = [self._get_frame(seq_path, f_id) for f_id in frame_ids]
-
+        
         if anno is None:
             anno = self.get_sequence_info(seq_id)
         

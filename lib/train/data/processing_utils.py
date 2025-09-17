@@ -22,6 +22,7 @@ def sample_target(im, target_bb, search_area_factor, output_sz=None, mask=None):
         cv image - extracted crop
         float - the factor by which the crop has been resized to make the crop size equal output_size
     """
+    
     if not isinstance(target_bb, list):
         x, y, w, h = target_bb.tolist()
     else:
@@ -105,7 +106,7 @@ def transform_image_to_crop(box_in: torch.Tensor, box_extract: torch.Tensor, res
         return box_out
 
 
-def jittered_center_crop(frames, box_extract, box_gt, search_area_factor, output_sz, masks=None):
+def jittered_center_crop(frames, box_extract, box_gt, search_area_factor, output_sz, masks=None,dataset=None):
     """ For each frame in frames, extracts a square crop centered at box_extract, of area search_area_factor^2
     times box_extract area. The extracted crops are then resized to output_sz. Further, the co-ordinates of the box
     box_gt are transformed to the image crop co-ordinates
@@ -123,15 +124,39 @@ def jittered_center_crop(frames, box_extract, box_gt, search_area_factor, output
         list - box_gt location in the crop co-ordinates
         """
 
-    if masks is None:
-        crops_resize_factors = [sample_target(f, a, search_area_factor, output_sz)
-                                for f, a in zip(frames, box_extract)]
-        frames_crop, resize_factors, att_mask = zip(*crops_resize_factors)
-        masks_crop = None
+    if dataset=="visevent":
+        frames_crop=[]
+        if masks is None:
+            for f,a in zip(frames,box_extract):
+                for i in range(len(f)):
+                    assert f[i].ndim==3
+                    tmp_frames_crop, resize_factors, att_mask = sample_target(f[i], a, search_area_factor, output_sz)
+                    frames_crop.append(tmp_frames_crop)
+                        
+        else:
+            for f,a,m in zip(frames,box_extract,masks):
+                for i in range(len(f)):
+                    assert f[i].ndim==3
+                    tmp_frames_crop, resize_factors, att_mask, masks_crop = sample_target(f[i], a, search_area_factor, output_sz, m)
+                    frames_crop.append(tmp_frames_crop)
+                    
+                        
     else:
-        crops_resize_factors = [sample_target(f, a, search_area_factor, output_sz, m)
-                                for f, a, m in zip(frames, box_extract, masks)]
-        frames_crop, resize_factors, att_mask, masks_crop = zip(*crops_resize_factors)
+        if masks is None:
+            crops_resize_factors = [sample_target(f, a, search_area_factor, output_sz)
+                                    for f, a in zip(frames, box_extract)]
+            frames_crop, resize_factors, att_mask = zip(*crops_resize_factors)
+            masks_crop = None
+        else:
+            crops_resize_factors = [sample_target(f, a, search_area_factor, output_sz, m)
+                                    for f, a, m in zip(frames, box_extract, masks)]
+            frames_crop, resize_factors, att_mask, masks_crop = zip(*crops_resize_factors)
+    if not isinstance(resize_factors, tuple):
+        resize_factors = (resize_factors,)
+    if not isinstance(att_mask, tuple):
+        att_mask = (att_mask,)
+    if masks is not None and not isinstance(masks_crop, tuple):
+        masks_crop = (masks_crop,)
     # frames_crop: tuple of ndarray (128,128,3), att_mask: tuple of ndarray (128,128)
     crop_sz = torch.Tensor([output_sz, output_sz])
 
@@ -139,7 +164,7 @@ def jittered_center_crop(frames, box_extract, box_gt, search_area_factor, output
     '''Note that here we use normalized coord'''
     box_crop = [transform_image_to_crop(a_gt, a_ex, rf, crop_sz, normalize=True)
                 for a_gt, a_ex, rf in zip(box_gt, box_extract, resize_factors)]  # (x1,y1,w,h) list of tensors
-
+    # print("frames_crop_type", type(frames_crop))
     return frames_crop, box_crop, att_mask, masks_crop
 
 
