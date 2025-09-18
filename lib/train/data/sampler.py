@@ -173,6 +173,14 @@ class TrackingSampler(torch.utils.data.Dataset):
                 # print("before processing, template_frames", type(data['template_images']), type(data['search_images']))
                 data = self.processing(data)
                 # check whether data is valid
+                
+                if dataset.get_name() == "visevent":
+                    data['template_images_event'] = data['template_images'][1:2]
+                    data['template_images'] = data['template_images'][0:1]
+                    data['search_images_event'] = data['search_images'][1:2]
+                    data['search_images'] = data['search_images'][0:1]
+                    # print("type(data['templasdsdsdte_images'])", data['template_images'].shape)
+                    # print("sampler divided data into image and event")
                 valid = data['valid']
             except:
                 valid = False
