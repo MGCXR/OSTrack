@@ -179,6 +179,9 @@ class TrackingSampler(torch.utils.data.Dataset):
                     data['template_images'] = data['template_images'][0:1]
                     data['search_images_event'] = data['search_images'][1:2]
                     data['search_images'] = data['search_images'][0:1]
+                else:
+                    data['template_images_event'] = data['template_images']
+                    data['search_images_event'] = data['search_images']
                     # print("type(data['templasdsdsdte_images'])", data['template_images'].shape)
                     # print("sampler divided data into image and event")
                 valid = data['valid']
