@@ -11,4 +11,4 @@ if __name__ == '__main__':
     checkpoint = torch.load('./temp/OSTrack_ep0300.pth.tar', map_location="cpu",weights_only=False)
     print(checkpoint.keys())
     checkpoint['epoch'] = 1
-    torch.save(checkpoint, './temp/OSTrack_ep001.pth')
+    torch.save(checkpoint, './temp/OSTrack_ep0001.pth.tar')
