@@ -131,7 +131,7 @@ def extract_results(trackers, dataset, report_name, skip_missing_seq=False, plot
             # Load results
             base_results_path = '{}/{}'.format(trk.results_dir, seq.name)
             results_path = '{}.txt'.format(base_results_path)
-
+            # print('Loading results from {}'.format(results_path))
             if os.path.isfile(results_path):
                 pred_bb = torch.tensor(load_text(str(results_path), delimiter=('\t', ','), dtype=np.float64))
             else:
