@@ -11,6 +11,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from .base_functions import *
 # network related
 from lib.models.ostrack import build_ostrack
+from lib.models.test import build_test
 # forward propagation related
 from lib.train.actors import OSTrackActor
 # for import modules
@@ -53,6 +54,8 @@ def run(settings):
     # Create network
     if settings.script_name == "ostrack":
         net = build_ostrack(cfg)
+    elif settings.script_name == "test":
+        net = build_test(cfg)
     else:
         raise ValueError("illegal script name")
 
@@ -69,6 +72,11 @@ def run(settings):
     settings.distill_loss_type = getattr(cfg.TRAIN, "DISTILL_LOSS_TYPE", "KL")
     # Loss functions and Actors
     if settings.script_name == "ostrack":
+        focal_loss = FocalLoss()
+        objective = {'giou': giou_loss, 'l1': l1_loss, 'focal': focal_loss, 'cls': BCEWithLogitsLoss()}
+        loss_weight = {'giou': cfg.TRAIN.GIOU_WEIGHT, 'l1': cfg.TRAIN.L1_WEIGHT, 'focal': 1., 'cls': 1.0}
+        actor = OSTrackActor(net=net, objective=objective, loss_weight=loss_weight, settings=settings, cfg=cfg)
+    elif settings.script_name == "test":
         focal_loss = FocalLoss()
         objective = {'giou': giou_loss, 'l1': l1_loss, 'focal': focal_loss, 'cls': BCEWithLogitsLoss()}
         loss_weight = {'giou': cfg.TRAIN.GIOU_WEIGHT, 'l1': cfg.TRAIN.L1_WEIGHT, 'focal': 1., 'cls': 1.0}
