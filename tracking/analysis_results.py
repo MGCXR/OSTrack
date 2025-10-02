@@ -27,12 +27,15 @@ dataset_name = 'visevent'
 # trackers.extend(trackerlist('dimp', 'prdimp18', None, range(0,5), 'PrDiMP18'))
 # trackers.extend(trackerlist('dimp', 'prdimp50', None, range(0,5), 'PrDiMP50'))
 """ostrack"""
-trackers.extend(trackerlist(name='ostrack', parameter_name='vitb_256_mae_ce_32x4_ep300_vis', dataset_name=dataset_name,
-                            run_ids=None, display_name='OSTrack256'))
+# trackers.extend(trackerlist(name='ostrack', parameter_name='vitb_256_mae_ce_32x4_ep300_vis', dataset_name=dataset_name,
+#                             run_ids=None, display_name='OSTrack256'))
 # trackers.extend(trackerlist(name='ostrack', parameter_name='vitb_256_mae_ce_32x4_ep300', dataset_name=dataset_name,
 #                             run_ids=None, display_name='OSTrack256'))
 # trackers.extend(trackerlist(name='ostrack', parameter_name='vitb_384_mae_ce_32x4_ep300', dataset_name=dataset_name,
 #                             run_ids=None, display_name='OSTrack384'))
+"""test"""
+trackers.extend(trackerlist(name='test', parameter_name='vitb_256_mae_ce_32x4_ep300_vis', dataset_name=dataset_name,
+                            run_ids=None, display_name='Test256'))
 
 
 dataset = get_dataset(dataset_name)

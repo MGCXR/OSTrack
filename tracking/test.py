@@ -51,7 +51,7 @@ def main():
         seq_name = int(args.sequence)
     except:
         seq_name = args.sequence
-
+    
     run_tracker(args.tracker_name, args.tracker_param, args.runid, args.dataset_name, seq_name, args.debug,
                 args.threads, num_gpus=args.num_gpus)
 
