@@ -47,6 +47,12 @@ class VisEvent(BaseVideoDataset):
     def get_name(self):
         return 'visevent'
     
+    def get_event(self):
+        return False
+    
+    def get_vis(self):
+        return True
+    
     def get_sequences_in_class(self, class_name):
         return class_name 
     

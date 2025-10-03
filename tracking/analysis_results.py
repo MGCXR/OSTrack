@@ -34,8 +34,12 @@ dataset_name = 'visevent'
 # trackers.extend(trackerlist(name='ostrack', parameter_name='vitb_384_mae_ce_32x4_ep300', dataset_name=dataset_name,
 #                             run_ids=None, display_name='OSTrack384'))
 """test"""
-trackers.extend(trackerlist(name='test', parameter_name='vitb_256_mae_ce_32x4_ep300_vis', dataset_name=dataset_name,
-                            run_ids=None, display_name='Test256'))
+trackers.extend(trackerlist(name='test', parameter_name='vitb_256_mae_ce_32x4_ep300_hybrid', dataset_name=dataset_name,
+                            run_ids=None, display_name='Test256_hybrid'))
+# trackers.extend(trackerlist(name='test', parameter_name='vitb_256_mae_ce_32x4_ep300_vis', dataset_name=dataset_name,
+#                             run_ids=None, display_name='Test256_vis'))
+trackers.extend(trackerlist(name='test', parameter_name='vitb_256_mae_ce_32x4_ep300_event', dataset_name=dataset_name,
+                            run_ids=None, display_name='Test256_event'))
 
 
 dataset = get_dataset(dataset_name)

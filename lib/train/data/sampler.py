@@ -175,10 +175,19 @@ class TrackingSampler(torch.utils.data.Dataset):
                 # check whether data is valid
                 
                 if dataset.get_name() == "visevent":
-                    data['template_images_event'] = data['template_images'][1:2]
-                    data['template_images'] = data['template_images'][0:1]
-                    data['search_images_event'] = data['search_images'][1:2]
-                    data['search_images'] = data['search_images'][0:1]
+                    if dataset.get_vis():
+                        # print("vis only")
+                        data['template_images_event'] = data['template_images'][1:2]
+                        data['template_images'] = data['template_images'][0:1]
+                        data['search_images_event'] = data['search_images'][1:2]
+                        data['search_images'] = data['search_images'][0:1]
+                    elif dataset.get_event():
+                        # print("event only")
+                        data['template_images_event'] = data['template_images'][0:1]
+                        data['template_images'] = data['template_images'][1:2]
+                        data['search_images_event'] = data['search_images'][0:1]
+                        data['search_images'] = data['search_images'][1:2]
+                    
                 else:
                     data['template_images_event'] = data['template_images']
                     data['search_images_event'] = data['search_images']

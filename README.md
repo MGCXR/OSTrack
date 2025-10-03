@@ -110,6 +110,10 @@ Download pre-trained [MAE ViT-Base weights](https://dl.fbaipublicfiles.com/mae/p
 
 ```
 python tracking/train.py --script ostrack --config vitb_256_mae_ce_32x4_ep300 --save_dir ./output --mode multiple --nproc_per_node 4 --use_wandb 1
+
+python tracking/train.py --script test --config vitb_256_mae_ce_32x4_ep300_vis --save_dir ./output --mode multiple --nproc_per_node 4 --use_wandb 0
+python tracking/train.py --script test --config vitb_256_mae_ce_32x4_ep300_event --save_dir ./output --mode multiple --nproc_per_node 4 --use_wandb 0
+python tracking/train.py --script test --config vitb_256_mae_ce_32x4_ep300_hybrid --save_dir ./output --mode multiple --nproc_per_node 4 --use_wandb 0
 ```
 
 Replace `--config` with the desired model config under `experiments/ostrack`. We use [wandb](https://github.com/wandb/client) to record detailed training logs, in case you don't want to use wandb, set `--use_wandb 0`.

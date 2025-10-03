@@ -28,8 +28,16 @@ DATA:
 
   TRAIN:
     DATASETS_NAME:
+    - LASOT
+    - GOT10K_vottrain
+    - COCO17
+    - TRACKINGNET
     - VISEVENT
     DATASETS_RATIO:
+    - 1
+    - 1
+    - 1
+    - 1
     - 1
     SAMPLE_PER_EPOCH: 60000
   VAL:
