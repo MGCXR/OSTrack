@@ -36,8 +36,8 @@ dataset_name = 'visevent'
 """test"""
 trackers.extend(trackerlist(name='test', parameter_name='vitb_256_mae_ce_32x4_ep300_hybrid', dataset_name=dataset_name,
                             run_ids=None, display_name='Test256_hybrid'))
-# trackers.extend(trackerlist(name='test', parameter_name='vitb_256_mae_ce_32x4_ep300_vis', dataset_name=dataset_name,
-#                             run_ids=None, display_name='Test256_vis'))
+trackers.extend(trackerlist(name='test', parameter_name='vitb_256_mae_ce_32x4_ep300_vis', dataset_name=dataset_name,
+                            run_ids=None, display_name='Test256_vis'))
 trackers.extend(trackerlist(name='test', parameter_name='vitb_256_mae_ce_32x4_ep300_event', dataset_name=dataset_name,
                             run_ids=None, display_name='Test256_event'))
 
