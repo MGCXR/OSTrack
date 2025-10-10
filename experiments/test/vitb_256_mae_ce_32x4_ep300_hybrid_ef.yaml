@@ -19,27 +19,27 @@ DATA:
     FACTOR: 2.0
     SCALE_JITTER: 0
     SIZE: 128
-#  TRAIN:
-#    DATASETS_NAME:
-#      - GOT10K_train_full
-#    DATASETS_RATIO:
-#      - 1
-#    SAMPLE_PER_EPOCH: 60000
-
   TRAIN:
     DATASETS_NAME:
-    - LASOT
-    - GOT10K_vottrain
-    - COCO17
-    - TRACKINGNET
     - VISEVENT
     DATASETS_RATIO:
     - 1
-    - 1
-    - 1
-    - 1
-    - 1
     SAMPLE_PER_EPOCH: 60000
+
+  # TRAIN:
+  #   DATASETS_NAME:
+  #   - LASOT
+  #   - GOT10K_vottrain
+  #   - COCO17
+  #   - TRACKINGNET
+  #   - VISEVENT
+  #   DATASETS_RATIO:
+  #   - 1
+  #   - 1
+  #   - 1
+  #   - 1
+  #   - 1
+  #   SAMPLE_PER_EPOCH: 60000
   VAL:
     DATASETS_NAME:
     - GOT10K_votval
@@ -51,7 +51,7 @@ MODEL:
   EXTRA_MERGER: False
   RETURN_INTER: False
   BACKBONE:
-    TYPE: vit_base_patch16_224_ce
+    TYPE: vit_hybrid_patch16_224_ce_ef
     STRIDE: 16
     CE_LOC: [3, 6, 9]
     CE_KEEP_RATIO: [0.7, 0.7, 0.7]

@@ -171,3 +171,4 @@ pytracking/run_local.py
 pretrained_models/mae_pretrain_vit_base.pth
 tensorboard/*
 temp/*
+Readme_temp.md
