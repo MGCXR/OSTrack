@@ -12,13 +12,14 @@ from torch.nn.modules.transformer import _get_clones
 from lib.models.layers.head import build_box_head
 from lib.models.test.vit import vit_base_patch16_224
 from lib.models.test.vit_ce import vit_large_patch16_224_ce, vit_base_patch16_224_ce
+from lib.models.test.vit_hybrid import vit_hybrid_patch16_224_ce_ef
 from lib.utils.box_ops import box_xyxy_to_cxcywh
 
 
 class Test(nn.Module):
     """ This is the base class for test """
 
-    def __init__(self, transformer, box_head, aux_loss=False, head_type="CORNER"):
+    def __init__(self, transformer, box_head, aux_loss=False, head_type="CORNER", mode='SINGLE'):
         """ Initializes the model.
         Parameters:
             transformer: torch module of the transformer architecture.
@@ -27,7 +28,7 @@ class Test(nn.Module):
         super().__init__()
         self.backbone = transformer
         self.box_head = box_head
-
+        self.mode = mode
         self.aux_loss = aux_loss
         self.head_type = head_type
         if head_type == "CORNER" or head_type == "CENTER":
@@ -39,14 +40,25 @@ class Test(nn.Module):
 
     def forward(self, template: torch.Tensor,
                 search: torch.Tensor,
+                template_event: torch.Tensor=None,
+                search_event: torch.Tensor=None,
                 ce_template_mask=None,
                 ce_keep_rate=None,
                 return_last_attn=False,
                 ):
-        x, aux_dict = self.backbone(z=template, x=search,
-                                    ce_template_mask=ce_template_mask,
-                                    ce_keep_rate=ce_keep_rate,
-                                    return_last_attn=return_last_attn, )
+        if self.mode == 'SINGLE':
+            # backbone
+            x, aux_dict = self.backbone(z=template, x=search,
+                                        ce_template_mask=ce_template_mask,
+                                        ce_keep_rate=ce_keep_rate,
+                                        return_last_attn=return_last_attn, )
+        elif self.mode == 'HYBRID':
+            x, aux_dict = self.backbone(z=template, x=search,z_event=template_event, x_event=search_event,
+                                        ce_template_mask=ce_template_mask,
+                                        ce_keep_rate=ce_keep_rate,
+                                        return_last_attn=return_last_attn, )
+        else:
+            raise NotImplementedError
 
         # Forward head
         feat_last = x
@@ -121,6 +133,14 @@ def build_test(cfg, training=True):
 
         hidden_dim = backbone.embed_dim
         patch_start_index = 1
+    elif cfg.MODEL.BACKBONE.TYPE == 'vit_hybrid_patch16_224_ce_ef':
+        backbone = vit_hybrid_patch16_224_ce_ef(pretrained, drop_path_rate=cfg.TRAIN.DROP_PATH_RATE,
+                                            ce_loc=cfg.MODEL.BACKBONE.CE_LOC,
+                                            ce_keep_ratio=cfg.MODEL.BACKBONE.CE_KEEP_RATIO,
+                                            )
+
+        hidden_dim = backbone.embed_dim
+        patch_start_index = 1
 
     else:
         raise NotImplementedError
@@ -134,6 +154,7 @@ def build_test(cfg, training=True):
         box_head,
         aux_loss=False,
         head_type=cfg.MODEL.HEAD.TYPE,
+        mode=cfg.TEST.TYPE,
     )
 
     if 'Test' in cfg.MODEL.PRETRAIN_FILE and training:

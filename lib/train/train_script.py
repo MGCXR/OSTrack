@@ -13,7 +13,7 @@ from .base_functions import *
 from lib.models.ostrack import build_ostrack
 from lib.models.test import build_test
 # forward propagation related
-from lib.train.actors import OSTrackActor
+from lib.train.actors import OSTrackActor, TestActor
 # for import modules
 import importlib
 
@@ -80,7 +80,10 @@ def run(settings):
         focal_loss = FocalLoss()
         objective = {'giou': giou_loss, 'l1': l1_loss, 'focal': focal_loss, 'cls': BCEWithLogitsLoss()}
         loss_weight = {'giou': cfg.TRAIN.GIOU_WEIGHT, 'l1': cfg.TRAIN.L1_WEIGHT, 'focal': 1., 'cls': 1.0}
-        actor = OSTrackActor(net=net, objective=objective, loss_weight=loss_weight, settings=settings, cfg=cfg)
+        if cfg.TEST.TYPE == 'SINGLE':
+            actor = OSTrackActor(net=net, objective=objective, loss_weight=loss_weight, settings=settings, cfg=cfg)
+        else:
+            actor = TestActor(net=net, objective=objective, loss_weight=loss_weight, settings=settings, cfg=cfg)
     else:
         raise ValueError("illegal script name")
 

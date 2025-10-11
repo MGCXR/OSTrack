@@ -116,9 +116,14 @@ class Tracker:
 
         # Initialize
         image = self._read_image(seq.frames[0])
-
+        image_event = self._read_image(seq.frames_event[0]) if hasattr(seq, 'frames_event') else None
         start_time = time.time()
-        out = tracker.initialize(image, init_info)
+        if tracker.cfg.TEST.TYPE == "SINGLE":
+            out = tracker.initialize(image, init_info)
+        elif tracker.cfg.TEST.TYPE == "HYBRID":
+            out = tracker.hybrid_initialize(image,image_event, init_info)
+        else:
+            raise NotImplementedError
         if out is None:
             out = {}
 
@@ -133,7 +138,7 @@ class Tracker:
 
         for frame_num, frame_path in enumerate(seq.frames[1:], start=1):
             image = self._read_image(frame_path)
-
+            image_event = self._read_image(seq.frames_event[frame_num]) if hasattr(seq, 'frames_event') else None
             start_time = time.time()
 
             info = seq.frame_info(frame_num)
@@ -141,7 +146,12 @@ class Tracker:
 
             if len(seq.ground_truth_rect) > 1:
                 info['gt_bbox'] = seq.ground_truth_rect[frame_num]
-            out = tracker.track(image, info)
+            if tracker.cfg.TEST.TYPE == "SINGLE":
+                out = tracker.track(image, info)
+            elif tracker.cfg.TEST.TYPE == "HYBRID":
+                out = tracker.hybrid_track(image, image_event, info)
+            else:
+                raise NotImplementedError
             prev_output = OrderedDict(out)
             _store_outputs(out, {'time': time.time() - start_time})
 

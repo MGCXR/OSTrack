@@ -21,9 +21,11 @@ class BaseDataset:
 class Sequence:
     """Class for the sequence in an evaluation."""
     def __init__(self, name, frames, dataset, ground_truth_rect, ground_truth_seg=None, init_data=None,
-                 object_class=None, target_visible=None, object_ids=None, multiobj_mode=False):
+                 object_class=None, target_visible=None, object_ids=None, multiobj_mode=False,frames_event=None):
         self.name = name
         self.frames = frames
+        if frames_event is not None:
+            self.frames_event = frames_event
         self.dataset = dataset
         self.ground_truth_rect = ground_truth_rect
         self.ground_truth_seg = ground_truth_seg

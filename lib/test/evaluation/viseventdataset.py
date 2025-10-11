@@ -23,11 +23,15 @@ class VisEventDataset(BaseDataset):
         ground_truth_rect = load_text(str(anno_path), delimiter=',', dtype=np.float64, backend='numpy')
 
         frames_path = os.path.join(self.base_path, sequence_name, "vis_imgs")
+        frames_path_event = os.path.join(self.base_path, sequence_name, "event_imgs")
         frame_list = [frame for frame in os.listdir(frames_path) if frame.endswith(".bmp")]
+        frame_list_event = [frame for frame in os.listdir(frames_path_event) if frame.endswith(".bmp")]
         frame_list.sort()
+        frame_list_event.sort()
         frames_list = [os.path.join(frames_path, frame) for frame in frame_list]
+        frames_list_event = [os.path.join(frames_path_event, frame) for frame in frame_list_event]
         
-        return Sequence(sequence_name, frames_list, 'visevent', ground_truth_rect.reshape(-1, 4))
+        return Sequence(sequence_name, frames_list, 'visevent', ground_truth_rect.reshape(-1, 4),frames_event=frames_list_event)
     
     def __len__(self):
         return len(self.sequence_list)
