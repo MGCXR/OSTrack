@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from timm.models.layers import Mlp, DropPath, trunc_normal_, lecun_normal_
 
-from lib.models.layers.attn import Attention
+from lib.models.layers.attn import Attention,CrossAttention
 
 
 def candidate_elimination(attn: torch.Tensor, tokens: torch.Tensor, lens_t: int, keep_ratio: float, global_index: torch.Tensor, box_mask_z: torch.Tensor):
@@ -118,5 +118,24 @@ class Block(nn.Module):
 
     def forward(self, x, mask=None):
         x = x + self.drop_path(self.attn(self.norm1(x), mask))
+        x = x + self.drop_path(self.mlp(self.norm2(x)))
+        return x
+
+class CrossBlock(nn.Module):
+
+    def __init__(self, dim, num_heads, mlp_ratio=4., qkv_bias=False, drop=0., attn_drop=0.,
+                 drop_path=0., act_layer=nn.GELU, norm_layer=nn.LayerNorm):
+        super().__init__()
+        self.norm1 = norm_layer(dim)
+        self.norm1_extra = norm_layer(dim)
+        self.attn = CrossAttention(dim, num_heads=num_heads, qkv_bias=qkv_bias, attn_drop=attn_drop, proj_drop=drop)
+        # NOTE: drop path for stochastic depth, we shall see if this is better than dropout here
+        self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
+        self.norm2 = norm_layer(dim)
+        mlp_hidden_dim = int(dim * mlp_ratio)
+        self.mlp = Mlp(in_features=dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
+
+    def forward(self, x,x_extra, mask=None):
+        x = x + self.drop_path(self.attn(self.norm1(x),self.norm1_extra(x_extra), mask))
         x = x + self.drop_path(self.mlp(self.norm2(x)))
         return x
