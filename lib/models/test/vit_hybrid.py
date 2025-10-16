@@ -415,6 +415,8 @@ class VisionTransformerLF(VisionTransformer):
         """
         # super().__init__()
         super().__init__()
+        norm_layer = norm_layer or partial(nn.LayerNorm, eps=1e-6)
+        act_layer = act_layer or nn.GELU
         self.vis=VisionTransformerCE(img_size=img_size, patch_size=patch_size, in_chans=in_chans, num_classes=num_classes, embed_dim=embed_dim, depth=depth,
                  num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, representation_size=representation_size, distilled=distilled,
                  drop_rate=drop_rate, attn_drop_rate=attn_drop_rate, drop_path_rate=drop_path_rate, embed_layer=embed_layer, norm_layer=norm_layer,
@@ -424,12 +426,18 @@ class VisionTransformerLF(VisionTransformer):
                  num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, representation_size=representation_size, distilled=distilled,
                  drop_rate=drop_rate, attn_drop_rate=attn_drop_rate, drop_path_rate=drop_path_rate, embed_layer=embed_layer, norm_layer=norm_layer,
                  act_layer=act_layer, weight_init=weight_init, ce_loc=ce_loc, ce_keep_ratio=ce_keep_ratio)
-        
+        checkpoint=torch.load('/home/mlc/OSTrack/pretrained_models/mae_pretrain_vit_base.pth', map_location="cpu")
+        self.vis.load_state_dict(checkpoint["model"], strict=False)
+        self.event.load_state_dict(checkpoint["model"], strict=False)
         self.cross=CrossBlock(dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, drop=drop_rate,
                     attn_drop=attn_drop_rate, norm_layer=norm_layer, act_layer=act_layer)
         
         
         self.init_weights(weight_init)
+    
+    def finetune_track(self,cfg, patch_start_index):
+        self.vis.finetune_track(cfg=cfg, patch_start_index=patch_start_index)
+        self.event.finetune_track(cfg=cfg, patch_start_index=patch_start_index)
     
     def forward(self, z, x, z_event, x_event, ce_template_mask=None, ce_keep_rate=None,
                 tnc_keep_rate=None,

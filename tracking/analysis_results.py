@@ -44,6 +44,8 @@ trackers.extend(trackerlist(name='test', parameter_name='vitb_256_mae_ce_32x4_ep
                             run_ids=None, display_name='Test256_hybrid_ef'))
 trackers.extend(trackerlist(name='test', parameter_name='vitb_256_mae_ce_32x4_ep300_hybrid_mf', dataset_name=dataset_name,
                             run_ids=None, display_name='Test256_hybrid_mf'))
+trackers.extend(trackerlist(name='test', parameter_name='vitb_256_mae_ce_32x4_ep300_hybrid_lf', dataset_name=dataset_name,
+                            run_ids=None, display_name='Test256_hybrid_lf'))
 
 
 dataset = get_dataset(dataset_name)
