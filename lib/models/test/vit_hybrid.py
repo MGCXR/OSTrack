@@ -448,15 +448,44 @@ class VisionTransformerLF(VisionTransformer):
         x = self.cross(x, x_event)
         
         return x, aux_dict
-        
+
+class NoceVisionTransformerMF(VisionTransformer):
+    def __init__(self, img_size=224, patch_size=16, in_chans=3, num_classes=1000, embed_dim=768, depth=12,
+                 num_heads=12, mlp_ratio=4., qkv_bias=True, representation_size=None, distilled=False,
+                 drop_rate=0., attn_drop_rate=0., drop_path_rate=0., embed_layer=PatchEmbed, norm_layer=None,
+                 act_layer=None, weight_init='',
+                 ce_loc=None, ce_keep_ratio=None):
+        super().__init__()
+        if isinstance(img_size, tuple):
+            self.img_size = img_size
+        else:
+            self.img_size = to_2tuple(img_size)
+        self.patch_size = patch_size
+        self.in_chans = in_chans
+
+        self.num_classes = num_classes
+        self.num_features = self.embed_dim = embed_dim  # num_features for consistency with other models
+        self.num_tokens = 2 if distilled else 1
+        norm_layer = norm_layer or partial(nn.LayerNorm, eps=1e-6)
+        act_layer = act_layer or nn.GELU
+
+        self.patch_embed = embed_layer(
+            img_size=img_size, patch_size=patch_size, in_chans=in_chans, embed_dim=embed_dim)
+        num_patches = self.patch_embed.num_patches
+        self.cross_block = CrossBlock(dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, drop=drop_rate,
+                    attn_drop=attn_drop_rate, norm_layer=norm_layer, act_layer=act_layer)
+
+        self.init_weights(weight_init)
 
 def _create_vision_transformer(pretrained=False, hybrid_type=None, **kwargs):
-    if hybrid_type == 'ef':
+    if hybrid_type == 'ce_ef':
         model = VisionTransformerEF(**kwargs)
-    elif hybrid_type == 'mf':
+    elif hybrid_type == 'ce_mf':
         model = VisionTransformerMF(**kwargs)
-    elif hybrid_type == 'lf':
+    elif hybrid_type == 'ce_lf':
         model = VisionTransformerLF(**kwargs)
+    elif hybrid_type == 'mf':
+        model = NoceVisionTransformerMF(**kwargs)
     else:
         raise ValueError('Unknown hybrid_type {}'.format(hybrid_type))
 
@@ -476,7 +505,7 @@ def vit_hybrid_patch16_224_ce_ef(pretrained=False, **kwargs):
     """
     model_kwargs = dict(
         patch_size=16, embed_dim=768, depth=12, num_heads=12, **kwargs)
-    model = _create_vision_transformer(pretrained=pretrained, hybrid_type='ef', **model_kwargs)
+    model = _create_vision_transformer(pretrained=pretrained, hybrid_type='ce_ef', **model_kwargs)
     return model
 
 def vit_hybrid_patch16_224_ce_mf(pretrained=False, **kwargs):
@@ -484,7 +513,7 @@ def vit_hybrid_patch16_224_ce_mf(pretrained=False, **kwargs):
     """
     model_kwargs = dict(
         patch_size=16, embed_dim=768, depth=12, num_heads=12, **kwargs)
-    model = _create_vision_transformer(pretrained=pretrained, hybrid_type='mf', **model_kwargs)
+    model = _create_vision_transformer(pretrained=pretrained, hybrid_type='ce_mf', **model_kwargs)
     return model
 
 def vit_hybrid_patch16_224_ce_lf(pretrained=False, **kwargs):
@@ -492,5 +521,14 @@ def vit_hybrid_patch16_224_ce_lf(pretrained=False, **kwargs):
     """
     model_kwargs = dict(
         patch_size=16, embed_dim=768, depth=12, num_heads=12, **kwargs)
-    model = _create_vision_transformer(pretrained=pretrained, hybrid_type='lf', **model_kwargs)
+    model = _create_vision_transformer(pretrained=pretrained, hybrid_type='ce_lf', **model_kwargs)
+    return model
+
+def vit_hybrid_patch16_224_mf(pretrained=False, **kwargs):
+    """ ViT-Base model (ViT-B/16) from original paper (https://arxiv.org/abs/2010.11929).
+    """
+    model_kwargs = dict(
+        patch_size=16, embed_dim=768, depth=12, num_heads=12, **kwargs)
+    model = _create_vision_transformer(pretrained=pretrained, hybrid_type='mf', **model_kwargs)
+    return model
     return model

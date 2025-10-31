@@ -6,7 +6,7 @@ from timm.models.layers import Mlp, DropPath, trunc_normal_, lecun_normal_
 from lib.models.layers.attn import Attention,CrossAttention
 
 
-def candidate_elimination(attn: torch.Tensor, tokens: torch.Tensor, lens_t: int, keep_ratio: float, global_index: torch.Tensor, box_mask_z: torch.Tensor):
+def candidate_elimination(attn: torch.Tensor, tokens: torch.Tensor, lens_t: int, keep_ratio: float, global_index: torch.Tensor, box_mask_z: torch.Tensor,lens_keep: int,lens_s: int):
     """
     Eliminate potential background candidates for computation reduction and noise cancellation.
     Args:
@@ -22,10 +22,10 @@ def candidate_elimination(attn: torch.Tensor, tokens: torch.Tensor, lens_t: int,
         keep_index (torch.Tensor): indices of kept search region tokens
         removed_index (torch.Tensor): indices of removed search region tokens
     """
-    lens_s = attn.shape[-1] - lens_t
+    # lens_s = attn.shape[-1] - lens_t
     bs, hn, _, _ = attn.shape
 
-    lens_keep = math.ceil(keep_ratio * lens_s)
+    # lens_keep = math.ceil(keep_ratio * lens_s)
     if lens_keep == lens_s:
         return tokens, global_index, None
 
@@ -97,7 +97,9 @@ class CEBlock(nn.Module):
         removed_index_search = None
         if self.keep_ratio_search < 1 and (keep_ratio_search is None or keep_ratio_search < 1):
             keep_ratio_search = self.keep_ratio_search if keep_ratio_search is None else keep_ratio_search
-            x, global_index_search, removed_index_search = candidate_elimination(attn, x, lens_t, keep_ratio_search, global_index_search, ce_template_mask)
+            lens_s = attn.shape[-1] - lens_t
+            lens_keep = math.ceil(keep_ratio_search * lens_s)
+            x, global_index_search, removed_index_search = candidate_elimination(attn, x, lens_t, keep_ratio_search, global_index_search, ce_template_mask,lens_keep,lens_s)
 
         x = x + self.drop_path(self.mlp(self.norm2(x)))
         return x, global_index_template, global_index_search, removed_index_search, attn
