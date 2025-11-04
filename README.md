@@ -28,10 +28,10 @@ The official implementation for the **ECCV 2022** paper [_Joint Feature Learning
 OSTrack is a simple, neat, high-performance **one-stream tracking framework** for joint feature learning and relational modeling based on self-attention operators.
 Without any additional temporal information, OSTrack achieves SOTA performance on multiple benchmarks. OSTrack can serve as a strong baseline for further research.
 
-| Tracker     | GOT-10K (AO) | LaSOT (AUC) | TrackingNet (AUC) | UAV123(AUC) |
-|:-----------:|:------------:|:-----------:|:-----------------:|:-----------:|
-| OSTrack-384 | 73.7         | 71.1        | 83.9              | 70.7        |
-| OSTrack-256 | 71.0         | 69.1        | 83.1              | 68.3        |
+|   Tracker   | GOT-10K (AO) | LaSOT (AUC) | TrackingNet (AUC) | UAV123(AUC) |
+| :---------: | :----------: | :---------: | :---------------: | :---------: |
+| OSTrack-384 |     73.7     |    71.1     |       83.9        |    70.7     |
+| OSTrack-256 |     71.0     |    69.1     |       83.1        |    68.3     |
 
 
 ### :star2: Fast Training
@@ -119,7 +119,7 @@ python tracking/train.py --script test --config vitb_256_mae_ce_32x4_ep300_hybri
 python tracking/test.py test vitb_256_mae_ce_32x4_ep300_hybrid_mf --dataset visevent --threads 16 --num_gpus 4
 python tracking/test.py test vitb_256_mae_ce_32x4_ep300_hybrid_lf --dataset visevent --threads 16 --num_gpus 4
 
-
+python tracking/profile_model.py --script test --config vitb_256_mae_ce_32x4_ep300_hybrid_mf
 ```
 
 Replace `--config` with the desired model config under `experiments/ostrack`. We use [wandb](https://github.com/wandb/client) to record detailed training logs, in case you don't want to use wandb, set `--use_wandb 0`.
