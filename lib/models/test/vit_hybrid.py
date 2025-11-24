@@ -14,7 +14,7 @@ from lib.models.layers.patch_embed import PatchEmbed
 from .utils import combine_tokens, recover_tokens
 from .vit import VisionTransformer
 from .vit_ce import VisionTransformerCE
-from ..layers.attn_blocks import CEBlock,CrossBlock
+from ..layers.attn_blocks import CEBlock,CrossBlock,Block
 
 _logger = logging.getLogger(__name__)
 
@@ -449,12 +449,13 @@ class VisionTransformerLF(VisionTransformer):
         
         return x, aux_dict
 
-class NoceVisionTransformerMF(VisionTransformer):
+class VisionTransformerHWMF(VisionTransformer):
     def __init__(self, img_size=224, patch_size=16, in_chans=3, num_classes=1000, embed_dim=768, depth=12,
                  num_heads=12, mlp_ratio=4., qkv_bias=True, representation_size=None, distilled=False,
                  drop_rate=0., attn_drop_rate=0., drop_path_rate=0., embed_layer=PatchEmbed, norm_layer=None,
                  act_layer=None, weight_init='',
                  ce_loc=None, ce_keep_ratio=None):
+        
         super().__init__()
         if isinstance(img_size, tuple):
             self.img_size = img_size
@@ -472,10 +473,102 @@ class NoceVisionTransformerMF(VisionTransformer):
         self.patch_embed = embed_layer(
             img_size=img_size, patch_size=patch_size, in_chans=in_chans, embed_dim=embed_dim)
         num_patches = self.patch_embed.num_patches
-        self.cross_block = CrossBlock(dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, drop=drop_rate,
+        
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
+        self.dist_token = nn.Parameter(torch.zeros(1, 1, embed_dim)) if distilled else None
+        self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + self.num_tokens, embed_dim))
+        self.pos_drop = nn.Dropout(p=drop_rate)
+
+        blocks = []
+        cross_index = 0
+        self.ce_loc = ce_loc
+        for i in range(depth):
+            if cross_index==3 or cross_index==6 or cross_index==9 or cross_index==12:
+                blocks.append(
+                    CrossBlock(dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, drop=drop_rate,
                     attn_drop=attn_drop_rate, norm_layer=norm_layer, act_layer=act_layer)
+                )
+            else:
+                blocks.append(
+                    Block(dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, drop=drop_rate,
+                        attn_drop=attn_drop_rate,  act_layer=act_layer, norm_layer=norm_layer)
+                )
+            cross_index+=1
+
+        self.blocks = nn.Sequential(*blocks)
+        self.norm = norm_layer(embed_dim)
 
         self.init_weights(weight_init)
+
+    def forward_features(self, z, x, z_event, x_event, mask_z=None, mask_x=None,
+                         return_last_attn=False
+                         ):
+        B, H, W = x.shape[0], x.shape[2], x.shape[3]
+
+        x = self.patch_embed(x)
+        z = self.patch_embed(z)
+        x_event = self.patch_embed(x_event)
+        z_event = self.patch_embed(z_event)
+
+        # attention mask handling
+        # B, H, W
+        if mask_z is not None and mask_x is not None:
+            mask_z = F.interpolate(mask_z[None].float(), scale_factor=1. / self.patch_size).to(torch.bool)[0]
+            mask_z = mask_z.flatten(1).unsqueeze(-1)
+
+            mask_x = F.interpolate(mask_x[None].float(), scale_factor=1. / self.patch_size).to(torch.bool)[0]
+            mask_x = mask_x.flatten(1).unsqueeze(-1)
+
+            mask_x = combine_tokens(mask_z, mask_x, mode=self.cat_mode)
+            mask_x = mask_x.squeeze(-1)
+
+        if self.add_cls_token:
+            cls_tokens = self.cls_token.expand(B, -1, -1)
+            cls_tokens = cls_tokens + self.cls_pos_embed
+
+        z += self.pos_embed_z
+        x += self.pos_embed_x
+        z_event += self.pos_embed_z
+        x_event += self.pos_embed_x
+
+        if self.add_sep_seg:
+            x += self.search_segment_pos_embed
+            z += self.template_segment_pos_embed
+            x_event += self.search_segment_pos_embed
+            z_event += self.template_segment_pos_embed
+
+        x = combine_tokens(z, x, mode=self.cat_mode)
+        x_event = combine_tokens(z_event, x_event, mode=self.cat_mode)
+        if self.add_cls_token:
+            x = torch.cat([cls_tokens, x], dim=1)
+            x_event = torch.cat([cls_tokens, x_event], dim=1)
+
+        x = self.pos_drop(x)
+        x_event = self.pos_drop(x_event)
+
+       
+        for i, blk in enumerate(self.blocks):
+            if isinstance(blk, CrossBlock):
+                x= blk(x, x_event)
+            else:
+                x= blk(x)
+                x_event= blk(x_event)
+
+        lens_z = self.pos_embed_z.shape[1]
+        lens_x = self.pos_embed_x.shape[1]
+        x = recover_tokens(x, lens_z, lens_x, mode=self.cat_mode)
+
+        aux_dict = {"attn": None}   
+
+        x = self.norm(x)
+        
+        return x, aux_dict
+
+    def forward(self, z, x, z_event, x_event,ce_template_mask=None, ce_keep_rate=None, return_last_attn=False):
+
+        x, aux_dict = self.forward_features(z, x, z_event, x_event)
+        
+        return x, aux_dict
 
 def _create_vision_transformer(pretrained=False, hybrid_type=None, **kwargs):
     if hybrid_type == 'ce_ef':
@@ -484,8 +577,8 @@ def _create_vision_transformer(pretrained=False, hybrid_type=None, **kwargs):
         model = VisionTransformerMF(**kwargs)
     elif hybrid_type == 'ce_lf':
         model = VisionTransformerLF(**kwargs)
-    elif hybrid_type == 'mf':
-        model = NoceVisionTransformerMF(**kwargs)
+    elif hybrid_type == 'hw_mf':
+        model = VisionTransformerHWMF(**kwargs)
     else:
         raise ValueError('Unknown hybrid_type {}'.format(hybrid_type))
 
@@ -524,11 +617,10 @@ def vit_hybrid_patch16_224_ce_lf(pretrained=False, **kwargs):
     model = _create_vision_transformer(pretrained=pretrained, hybrid_type='ce_lf', **model_kwargs)
     return model
 
-def vit_hybrid_patch16_224_mf(pretrained=False, **kwargs):
+def vit_hybrid_patch16_224_hw_mf(pretrained=False, **kwargs):
     """ ViT-Base model (ViT-B/16) from original paper (https://arxiv.org/abs/2010.11929).
     """
     model_kwargs = dict(
         patch_size=16, embed_dim=768, depth=12, num_heads=12, **kwargs)
-    model = _create_vision_transformer(pretrained=pretrained, hybrid_type='mf', **model_kwargs)
-    return model
+    model = _create_vision_transformer(pretrained=pretrained, hybrid_type='hw_mf', **model_kwargs)
     return model

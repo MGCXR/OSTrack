@@ -12,7 +12,7 @@ from torch.nn.modules.transformer import _get_clones
 from lib.models.layers.head import build_box_head
 from lib.models.test.vit import vit_base_patch16_224
 from lib.models.test.vit_ce import vit_large_patch16_224_ce, vit_base_patch16_224_ce
-from lib.models.test.vit_hybrid import vit_hybrid_patch16_224_ce_ef,vit_hybrid_patch16_224_ce_mf,vit_hybrid_patch16_224_ce_lf
+from lib.models.test.vit_hybrid import vit_hybrid_patch16_224_ce_ef,vit_hybrid_patch16_224_ce_mf,vit_hybrid_patch16_224_ce_lf,vit_hybrid_patch16_224_hw_mf
 from lib.utils.box_ops import box_xyxy_to_cxcywh
 
 
@@ -65,7 +65,7 @@ class Test(nn.Module):
         if isinstance(x, list):
             feat_last = x[-1]
         out = self.forward_head(feat_last, None)
-
+        
         out.update(aux_dict)
         out['backbone_feat'] = x
         return out
@@ -153,6 +153,15 @@ def build_test(cfg, training=True):
         
     elif cfg.MODEL.BACKBONE.TYPE == 'vit_hybrid_patch16_224_ce_lf':
         backbone = vit_hybrid_patch16_224_ce_lf(pretrained, drop_path_rate=cfg.TRAIN.DROP_PATH_RATE,
+                                            ce_loc=cfg.MODEL.BACKBONE.CE_LOC,
+                                            ce_keep_ratio=cfg.MODEL.BACKBONE.CE_KEEP_RATIO,
+                                            )
+
+        hidden_dim = backbone.embed_dim
+        patch_start_index = 1
+    
+    elif cfg.MODEL.BACKBONE.TYPE == 'vit_hybrid_patch16_224_hw_mf':
+        backbone = vit_hybrid_patch16_224_hw_mf(pretrained, drop_path_rate=cfg.TRAIN.DROP_PATH_RATE,
                                             ce_loc=cfg.MODEL.BACKBONE.CE_LOC,
                                             ce_keep_ratio=cfg.MODEL.BACKBONE.CE_KEEP_RATIO,
                                             )

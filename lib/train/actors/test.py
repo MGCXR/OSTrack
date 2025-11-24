@@ -96,6 +96,7 @@ class TestActor(BaseActor):
         pred_boxes = pred_dict['pred_boxes']
         if torch.isnan(pred_boxes).any():
             raise ValueError("Network outputs is NAN! Stop Training")
+    
         num_queries = pred_boxes.size(1)
         pred_boxes_vec = box_cxcywh_to_xyxy(pred_boxes).view(-1, 4)  # (B,N,4) --> (BN,4) (x1,y1,x2,y2)
         gt_boxes_vec = box_xywh_to_xyxy(gt_bbox)[:, None, :].repeat((1, num_queries, 1)).view(-1, 4).clamp(min=0.0,
