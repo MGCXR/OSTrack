@@ -1,7 +1,8 @@
 import os
 import argparse
 import random
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 def parse_args():
     """
@@ -14,6 +15,7 @@ def parse_args():
     parser.add_argument('--save_dir', type=str, help='root directory to save checkpoints, logs, and tensorboard')
     parser.add_argument('--mode', type=str, choices=["single", "multiple", "multi_node"], default="multiple",
                         help="train on single gpu or multiple gpus")
+    parser.add_argument('--nohup', type=int, choices=[0, 1], default=0)  # whether to use nohup
     parser.add_argument('--nproc_per_node', type=int, help="number of GPUs per node")  # specify when mode is multiple
     parser.add_argument('--use_lmdb', type=int, choices=[0, 1], default=0)  # whether datasets are in lmdb format
     parser.add_argument('--script_prv', type=str, help='training script name')
@@ -44,11 +46,18 @@ def main():
                     % (args.script, args.config, args.save_dir, args.use_lmdb, args.script_prv, args.config_prv,
                        args.distill, args.script_teacher, args.config_teacher, args.use_wandb)
     elif args.mode == "multiple":
-        train_cmd = "python -m torch.distributed.launch --nproc_per_node %d --master_port %d lib/train/run_training.py " \
-                    "--script %s --config %s --save_dir %s --use_lmdb %d --script_prv %s --config_prv %s --use_wandb %d " \
-                    "--distill %d --script_teacher %s --config_teacher %s" \
-                    % (args.nproc_per_node, random.randint(10000, 50000), args.script, args.config, args.save_dir, args.use_lmdb, args.script_prv, args.config_prv, args.use_wandb,
-                       args.distill, args.script_teacher, args.config_teacher)
+        if args.nohup:
+            train_cmd = "nohup python -m torch.distributed.launch --nproc_per_node %d --master_port %d lib/train/run_training.py " \
+                        "--script %s --config %s --save_dir %s --use_lmdb %d --script_prv %s --config_prv %s --use_wandb %d " \
+                        "--distill %d --script_teacher %s --config_teacher %s &" \
+                        % (args.nproc_per_node, random.randint(10000, 50000), args.script, args.config, args.save_dir, args.use_lmdb, args.script_prv, args.config_prv, args.use_wandb,
+                        args.distill, args.script_teacher, args.config_teacher)
+        else:
+            train_cmd = "python -m torch.distributed.launch --nproc_per_node %d --master_port %d lib/train/run_training.py " \
+                        "--script %s --config %s --save_dir %s --use_lmdb %d --script_prv %s --config_prv %s --use_wandb %d " \
+                        "--distill %d --script_teacher %s --config_teacher %s" \
+                        % (args.nproc_per_node, random.randint(10000, 50000), args.script, args.config, args.save_dir, args.use_lmdb, args.script_prv, args.config_prv, args.use_wandb,
+                        args.distill, args.script_teacher, args.config_teacher)
     elif args.mode == "multi_node":
         train_cmd = "python -m torch.distributed.launch --nproc_per_node %d --master_addr %s --master_port %d --nnodes %d --node_rank %d lib/train/run_training.py " \
                     "--script %s --config %s --save_dir %s --use_lmdb %d --script_prv %s --config_prv %s --use_wandb %d " \

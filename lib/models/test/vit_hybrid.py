@@ -483,7 +483,7 @@ class VisionTransformerHWMF(VisionTransformer):
         cross_index = 0
         self.ce_loc = ce_loc
         for i in range(depth):
-            if cross_index==3 or cross_index==6 or cross_index==9 or cross_index==12:
+            if cross_index==6 or cross_index==9 or cross_index==12:
                 blocks.append(
                     CrossBlock(dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, drop=drop_rate,
                     attn_drop=attn_drop_rate, norm_layer=norm_layer, act_layer=act_layer)

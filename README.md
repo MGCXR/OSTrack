@@ -117,7 +117,7 @@ python tracking/train.py --script test --config vitb_256_mae_ce_32x4_ep300_vis -
 python tracking/train.py --script test --config vitb_256_mae_ce_32x4_ep300_event --save_dir ./output --mode multiple --nproc_per_node 4 --use_wandb 0
 
 python tracking/train.py --script test --config vitb_256_mae_ce_32x4_ep300_hybrid_ef --save_dir ./output --mode multiple --nproc_per_node 4 --use_wandb 0
-python tracking/train.py --script test --config vitb_256_mae_ce_32x4_ep300_hybrid_hw_mf --save_dir ./output --mode multiple --nproc_per_node 4 --use_wandb 0
+python tracking/train.py --script test --config vitb_256_mae_ce_32x4_ep300_hybrid_hw_mf --save_dir ./output --mode multiple --nproc_per_node 4 --use_wandb 0 --nohup 1
 
 ## test
 python tracking/test.py test vitb_256_mae_ce_32x4_ep300_hybrid_mf --dataset visevent --threads 16 --num_gpus 4
@@ -127,6 +127,10 @@ python tracking/test.py test vitb_256_mae_ce_32x4_ep300_hybrid_lf --dataset vise
 ## speed
 python tracking/profile_model.py --script test --config vitb_256_mae_ce_32x4_ep300_hybrid_mf
 python tracking/profile_model.py --script test --config vitb_256_mae_ce_32x4_ep300_hybrid_hw_mf
+
+##tensorboard
+tensorboard --logdir=tensorboard/train/test
+
 ```
 
 Replace `--config` with the desired model config under `experiments/ostrack`. We use [wandb](https://github.com/wandb/client) to record detailed training logs, in case you don't want to use wandb, set `--use_wandb 0`.
