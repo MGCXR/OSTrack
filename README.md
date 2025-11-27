@@ -128,6 +128,9 @@ python tracking/test.py test vitb_256_mae_ce_32x4_ep300_hybrid_lf --dataset vise
 python tracking/profile_model.py --script test --config vitb_256_mae_ce_32x4_ep300_hybrid_mf
 python tracking/profile_model.py --script test --config vitb_256_mae_ce_32x4_ep300_hybrid_hw_mf
 
+## analysis
+python tracking/analysis_results.py
+
 ##tensorboard
 tensorboard --logdir=tensorboard/train/test
 
