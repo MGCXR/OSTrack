@@ -44,7 +44,7 @@ pip install jpeg4py
 echo ""
 echo ""
 echo "****************** Installing tensorboard ******************"
-pip install tensorboard
+pip install tb-nightly
 
 echo ""
 echo ""
@@ -55,7 +55,7 @@ echo ""
 echo ""
 echo "****************** Installing thop tool for FLOPs and Params computing ******************"
 pip install thop
-    
+
 echo ""
 echo ""
 echo "****************** Installing colorama ******************"
