@@ -4,7 +4,7 @@ conda activate ostrack
 bash install.sh
 
 ## create local file
-python tracking/create_default_local_file.py --workspace_dir . --data_dir ./data --save_dir ./output
+python tracking/create_default_local_file.py --workspace_dir . --data_dir /data1/OsTrack --save_dir ./output
 
 ## training 
 python tracking/train.py --script test --config vitb_256_mae_ce_32x4_ep300_vis --save_dir ./output --mode multiple --nproc_per_node 4 --use_wandb 0
