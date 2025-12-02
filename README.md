@@ -42,3 +42,11 @@ python tracking/test.py ostrack vitb_384_mae_ce_32x4_ep300 --dataset vot22 --thr
 ## compare 
 compare multi -f ONNX -m ../Test_ep0300.onnx -i "{'template':(1,3,128,128),'search':(1,3,256,256),'template_event':(1,3,128,128),'search_event':(1,3,256,256)}" -a -o ./cpmpare_result
 
+
+
+## hardware convert
+
+first
+lib/models/test/test.py : function forward : return out
+lib/models/layers/head.py : class CenterPredictor : function forward : avoid box mapback
+lib/models/test/vit_hybrid.py : class VisionTransformerHWMF : cross_index adaptive
