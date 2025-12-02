@@ -12,7 +12,7 @@ from torch.ao.quantization import (
 # ======================================
 # 1. 加载浮点模型（你可以换成自己的）
 # ======================================
-model_file='./convert/test_mf/Test_ep0300.pth'
+model_file='./convert/test_mf/models/Test_ep0300.pth'
 model=torch.load(model_file,map_location='cpu',weights_only=False) 
 model.eval()
 

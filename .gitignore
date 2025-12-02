@@ -172,4 +172,5 @@ pretrained_models/mae_pretrain_vit_base.pth
 tensorboard/*
 temp/*
 Readme_temp.md
-convert/
+convert/test_mf/models/*
+convert/test_mf/tmp_net/*
