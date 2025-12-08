@@ -54,7 +54,7 @@ pip install tikzplotlib
 echo ""
 echo ""
 echo "****************** Installing thop tool for FLOPs and Params computing ******************"
-pip install thop-0.0.31.post2005241907
+pip install thop
 
 echo ""
 echo ""
@@ -86,7 +86,7 @@ pip install tensorboardX
 echo ""
 echo ""
 echo "****************** Downgrade setuptools ******************"
-pip install setuptools==59.5.0
+pip install setuptools
 
 
 echo ""
