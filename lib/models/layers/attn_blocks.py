@@ -141,3 +141,15 @@ class CrossBlock(nn.Module):
         x = x + self.drop_path(self.attn(self.norm1(x),self.norm1_extra(x_extra), mask))
         x = x + self.drop_path(self.mlp(self.norm2(x)))
         return x
+    
+class CoCrossBlock(nn.Module):
+
+    def __init__(self, dim, num_heads, mlp_ratio=4., qkv_bias=False, drop=0., attn_drop=0.,
+                 drop_path=0., act_layer=nn.GELU, norm_layer=nn.LayerNorm):
+        super().__init__()
+        self.cross_block1 = CrossBlock(dim, num_heads, mlp_ratio, qkv_bias, drop, attn_drop, drop_path, act_layer, norm_layer)
+        self.cross_block2 = CrossBlock(dim, num_heads, mlp_ratio, qkv_bias, drop, attn_drop, drop_path, act_layer, norm_layer)
+    def forward(self, x1, x2, mask=None):
+        x1 = self.cross_block1(x1, x2, mask)
+        x2 = self.cross_block2(x2, x1, mask)
+        return x1, x2

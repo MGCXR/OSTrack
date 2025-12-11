@@ -37,7 +37,7 @@ python3 /usr/local/lynxi/sdk/tools/modelTool/modelTool.py --modelPath ./onnx.mdl
 python tracking/analysis_results.py
 
 ## debug
-python tracking/test.py ostrack vitb_384_mae_ce_32x4_ep300 --dataset vot22 --threads 1 --num_gpus 1 --debug 1
+python tracking/test.py ostrack vitb_384_mae_ce_32x4_ep300 --dataset visevent --threads 1 --num_gpus 1 --debug 1
 
 ## compare 
 compare multi -f ONNX -m ../Test_ep0300.onnx -i "{'template':(1,3,128,128),'search':(1,3,256,256),'template_event':(1,3,128,128),'search_event':(1,3,256,256)}" -a -o ./cpmpare_result
