@@ -35,7 +35,7 @@ inputs_dict={'template': template_np, 'search': search_np, 'template_event': tem
 # np.save('./convert/test_mf/inputs_dict.dat', inputs_dict)
 
 
-# model_file = 'convert/test_mf/Test_ep0300.onnx'
+# model_file = 'convert/test_mf/models/Test_ep0300.onnx'
 model_file = 'convert/test_mf/models/output.onnx'
 target = 'apu'
 dtype = 'float32'
@@ -60,22 +60,29 @@ dtype = 'float32'
 
 
 # model_onnx = onnx.load(model_file)
-model_onnx = ort.InferenceSession(model_file)
+# model_onnx = ort.InferenceSession(model_file)
 
-output_onnx = model_onnx.run(None, {'template': template_np, 'search': search_np, 'template_event': template_event_np, 'search_event': search_event_np})
+# output_onnx = model_onnx.run(None, {'template': template_np, 'search': search_np, 'template_event': template_event_np, 'search_event': search_event_np})
 # np.save('./convert/test_mf/output_onnx.dat', output_onnx)
-# r_engine = lyn.load(path='./convert/test_mf/tmp_net/onnx/Net_0', device=0)
+r_engine = lyn.load(path='./convert/test_mf/tmp_net/onnx/Net_0', device=0)
 
 # @lyn.PerfLogger(config='./convert/test_mf/tmp_net/onnx/Net_0/apu_0/profiler/debug_chip0.json', output="./convert/test_mf/tmp_net/output")
 # def run_case():
 #     r_engine.run(template=template_np, search=search_np, template_event=template_event_np, search_event=search_event_np)
 # run_case()
 
-# r_engine.run(template=template_np, search=search_np, template_event=template_event_np, search_event=search_event_np)
-# output = r_engine.get_output()
+r_engine.run(template=template_np, search=search_np, template_event=template_event_np, search_event=search_event_np)
+output = r_engine.get_output()
 
-# print('-------------------------------------------------------------------------\n',output_onnx,
-#       '\n','-------------------------------------------------------------------------\n',output)
+# np.save('./convert/result/output_0_apu.npy', output[0])
+# np.save('./convert/result/output_0_onnx.npy', output_onnx[0])
+# np.save('./convert/result/output_1_apu.npy', output[1])
+# np.save('./convert/result/output_1_onnx.npy', output_onnx[1])
+# np.save('./convert/result/output_2_apu.npy', output[2])
+# np.save('./convert/result/output_2_onnx.npy', output_onnx[2])
+
+# print('-------------------------------------------------------------------------\n',output_onnx[0],
+#       '\n','-------------------------------------------------------------------------\n',output[0])
 
 
 
@@ -94,7 +101,7 @@ output_onnx = model_onnx.run(None, {'template': template_np, 'search': search_np
 
 
 # # -----------------------------------------------------------------------------
-# model_file = 'convert/test_mf/Test_ep0300.pth'
+# model_file = 'convert/test_mf/models/Test_ep0300.pth'
 # # model_file = 'convert/test_mf/Test_ep0300_scripted.pth'
 # target = 'apu'
 # dtype = 'float32'
@@ -131,3 +138,4 @@ output_onnx = model_onnx.run(None, {'template': template_np, 'search': search_np
 # print(output_torch['score_map'],'------------------------------------------------\n',output_onnx[0])
 # print(output_torch[0],'\n',output_onnx[0])
 # print(output_torch['pred_boxes'],'\n',output)
+# print(output_torch,'------------------------------------------------\n',output[1])

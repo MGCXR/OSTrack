@@ -174,3 +174,4 @@ temp/*
 Readme_temp.md
 convert/test_mf/models/*
 convert/test_mf/tmp_net/*
+convert/result/*
