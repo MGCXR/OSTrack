@@ -1,88 +1,84 @@
 import argparse
 import os
-import sys
+import time
+from typing import Dict, List
+
+import numpy as np
 import onnx
-import torch
+
+try:
+    import onnxruntime as ort
+    from onnxruntime.quantization import (
+        CalibrationDataReader,
+        QuantFormat,
+        QuantType,
+        quantize_dynamic,
+        quantize_static,
+    )
+except ImportError as exc:
+    raise ImportError(
+        "onnxruntime and onnxruntime-tools are required for ONNX PTQ. "
+        "Please install onnxruntime (or onnxruntime-gpu)."
+    ) from exc
 
 
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if PROJECT_ROOT not in sys.path:
-    sys.path.append(PROJECT_ROOT)
+class NumpyCalibrationReader(CalibrationDataReader):
+    def __init__(self, samples: List[Dict[str, np.ndarray]]):
+        self.samples = samples
+        self.index = 0
 
-from lib.config.test.config import cfg, update_config_from_file
-from lib.models.test import build_test
-from ptq.unit import (
-    benchmark_latency_ms,
-    bytes_of_torch_obj,
-    default_state_dict_output_path,
-    format_mb,
-    load_calibration_batches,
-    quantize_dynamic_linear,
-    quantize_static_fx,
-    quick_forward_check,
-    save_outputs,
-)
+    def get_next(self):
+        if self.index >= len(self.samples):
+            return None
+        sample = self.samples[self.index]
+        self.index += 1
+        return sample
 
 
 def parse_args():
-    parser = argparse.ArgumentParser("PTQ for OSTrack Test model")
+    parser = argparse.ArgumentParser("ONNX-only PTQ for OSTrack model")
     parser.add_argument(
         "--config",
         type=str,
         default="experiments/test/vitb_256_mae_ce_32x4_ep300_hybrid_hw_mf_co.yaml",
-        help="Path to yaml config, e.g. experiments/test/vitb_256_mae_ce_32x4_ep300_hybrid_mf.yaml",
+        help="Reserved for compatibility. Not used in ONNX-only mode.",
     )
     parser.add_argument(
         "--checkpoint",
         type=str,
-        default="output/checkpoints/train/test/vitb_256_mae_ce_32x4_ep300_hybrid_hw_mf_co",
-        help="Path to float checkpoint file (.pth/.pth.tar) or checkpoint directory.",
+        default="convert/test_mf/models/output.onnx",
+        help="Path to ONNX model file or directory containing ONNX files.",
     )
     parser.add_argument(
         "--output",
         type=str,
-        default="ptq/quantized_test_dynamic.pth",
-        help="Path to save quantized model object.",
-    )
-    parser.add_argument(
-        "--save-state-dict",
-        action="store_true",
-        help="If set, also save quantized state_dict.",
-    )
-    parser.add_argument(
-        "--state-dict-output",
-        type=str,
-        default="",
-        help="Path to save quantized state_dict. Default: <output>_state_dict.pth",
+        default="ptq/quantized_test_dynamic.onnx",
+        help="Path to save quantized ONNX model.",
     )
     parser.add_argument(
         "--mode",
         type=str,
         choices=["dynamic", "static"],
         default="dynamic",
-        help="Quantization mode. static is experimental for this architecture.",
+        help="Quantization mode for ONNX Runtime.",
     )
     parser.add_argument(
         "--backend",
         type=str,
-        choices=["fbgemm", "qnnpack"],
         default="fbgemm",
-        help="Quantization backend for static PTQ.",
+        help="Reserved for compatibility. Not used in ONNX-only mode.",
     )
     parser.add_argument(
         "--calib-data",
         type=str,
         default="",
-        help=(
-            "Optional .pt calibration file. Supported formats: "
-            "list[dict], dict[str, Tensor], list/tuple of tensors."
-        ),
+        help="Optional .npz calibration file for static quantization.",
     )
     parser.add_argument(
         "--calib-batches",
         type=int,
         default=16,
-        help="Number of calibration batches for static PTQ.",
+        help="Calibration sample count for static quantization.",
     )
     parser.add_argument(
         "--warmup-iters",
@@ -100,159 +96,206 @@ def parse_args():
         "--batch-size",
         type=int,
         default=1,
-        help="Batch size used for forward check / benchmark / random calibration.",
+        help="Batch size for random benchmark/calibration inputs.",
+    )
+    parser.add_argument(
+        "--save-state-dict",
+        action="store_true",
+        help="Reserved for compatibility. Ignored in ONNX-only mode.",
+    )
+    parser.add_argument(
+        "--state-dict-output",
+        type=str,
+        default="",
+        help="Reserved for compatibility. Ignored in ONNX-only mode.",
     )
     return parser.parse_args()
 
 
-def load_float_model_pytorch(config_path, checkpoint_path):
-    update_config_from_file(config_path)
-    model = build_test(cfg, training=False)
+def resolve_onnx_path(path: str) -> str:
+    if os.path.isfile(path):
+        if not path.lower().endswith(".onnx"):
+            raise ValueError(f"Only .onnx is supported in this script: {path}")
+        return path
 
-    ckpt = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
-    state_dict = ckpt["net"] if isinstance(ckpt, dict) and "net" in ckpt else ckpt
-    missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=True)
-    if len(missing_keys) > 0 or len(unexpected_keys) > 0:
-        raise RuntimeError(
-            "Checkpoint key mismatch. "
-            f"missing_keys={missing_keys}, unexpected_keys={unexpected_keys}"
-        )
-
-    model.eval()
-    return model
-
-def load_float_model_onnx(config_path, checkpoint_path):
-    model = onnx.load(checkpoint_path)
-
-    # 检查模型是否合法
-    onnx.checker.check_model(model)
-
-    print("ONNX模型加载成功")
-    print("模型路径:", checkpoint_path)
-
-    return model
-def load_float_model(config_path, checkpoint_path):
-    if checkpoint_path.endswith(".onnx"):
-        return load_float_model_onnx(config_path, checkpoint_path)
-    else:
-        return load_float_model_pytorch(config_path, checkpoint_path)
-
-def resolve_checkpoint_path(checkpoint_path: str) -> str:
-    if os.path.isfile(checkpoint_path):
-        return checkpoint_path
-
-    if os.path.isdir(checkpoint_path):
+    if os.path.isdir(path):
         candidates = [
-            os.path.join(checkpoint_path, name)
-            for name in os.listdir(checkpoint_path)
-            if name.startswith("Test_ep") and (name.endswith(".pth") or name.endswith(".pth.tar"))
+            os.path.join(path, name)
+            for name in os.listdir(path)
+            if name.lower().endswith(".onnx")
         ]
         if len(candidates) == 0:
-            raise FileNotFoundError(
-                f"No checkpoint files like Test_ep*.pth(.tar) found in directory: {checkpoint_path}"
-            )
+            raise FileNotFoundError(f"No .onnx model found in directory: {path}")
         candidates.sort(key=os.path.getmtime)
         latest = candidates[-1]
-        print(f"Resolved checkpoint directory to latest file: {latest}")
+        print(f"Resolved ONNX directory to latest file: {latest}")
         return latest
 
-    raise FileNotFoundError(f"Checkpoint path does not exist: {checkpoint_path}")
+    raise FileNotFoundError(f"Checkpoint path does not exist: {path}")
+
+
+def create_session(model_path: str) -> ort.InferenceSession:
+    return ort.InferenceSession(model_path, providers=["CPUExecutionProvider"])
+
+
+def normalize_dim(dim, fallback: int) -> int:
+    if isinstance(dim, int) and dim > 0:
+        return dim
+    return fallback
+
+
+def random_input_from_session(session: ort.InferenceSession, batch_size: int) -> Dict[str, np.ndarray]:
+    feed = {}
+    for i_meta in session.get_inputs():
+        shape = []
+        for idx, dim in enumerate(i_meta.shape):
+            if idx == 0:
+                shape.append(normalize_dim(dim, batch_size))
+            else:
+                shape.append(normalize_dim(dim, 1))
+
+        if "float16" in i_meta.type:
+            arr = np.random.randn(*shape).astype(np.float16)
+        else:
+            arr = np.random.randn(*shape).astype(np.float32)
+        feed[i_meta.name] = arr
+    return feed
+
+
+def load_npz_calibration(calib_path: str, input_names: List[str], limit: int) -> List[Dict[str, np.ndarray]]:
+    data = np.load(calib_path, allow_pickle=True)
+    if not all(name in data for name in input_names):
+        missing = [name for name in input_names if name not in data]
+        raise KeyError(
+            "Calibration npz must contain one array per ONNX input name. "
+            f"Missing keys: {missing}"
+        )
+
+    total = int(data[input_names[0]].shape[0])
+    count = min(total, limit)
+    samples = []
+    for i in range(count):
+        sample = {name: np.asarray(data[name][i : i + 1]) for name in input_names}
+        samples.append(sample)
+    return samples
+
+
+def build_calibration_samples(session: ort.InferenceSession, calib_path: str, calib_batches: int, batch_size: int):
+    input_names = [x.name for x in session.get_inputs()]
+    if calib_path == "":
+        return [random_input_from_session(session, batch_size) for _ in range(calib_batches)]
+
+    if not os.path.isfile(calib_path):
+        raise FileNotFoundError(f"Calibration file does not exist: {calib_path}")
+    if not calib_path.lower().endswith(".npz"):
+        raise ValueError("Only .npz calibration file is supported in ONNX-only mode.")
+
+    samples = load_npz_calibration(calib_path, input_names, calib_batches)
+    if len(samples) == 0:
+        raise ValueError("No calibration samples loaded from npz file.")
+    return samples
+
+
+def benchmark_latency_ms(session: ort.InferenceSession, batch_size: int, warmup_iters: int, bench_iters: int) -> float:
+    out_names = [o.name for o in session.get_outputs()]
+    for _ in range(warmup_iters):
+        session.run(out_names, random_input_from_session(session, batch_size))
+
+    t0 = time.perf_counter()
+    for _ in range(bench_iters):
+        session.run(out_names, random_input_from_session(session, batch_size))
+    t1 = time.perf_counter()
+
+    return (t1 - t0) * 1000.0 / max(bench_iters, 1)
+
+
+def file_size_mb(path: str) -> float:
+    return os.path.getsize(path) / (1024.0 * 1024.0)
+
+
+def ensure_parent_dir(path: str):
+    parent = os.path.dirname(path)
+    if parent != "":
+        os.makedirs(parent, exist_ok=True)
 
 
 def main():
     args = parse_args()
 
-    config_path = os.path.abspath(args.config)
-    checkpoint_path = resolve_checkpoint_path(os.path.abspath(args.checkpoint))
+    model_path = resolve_onnx_path(os.path.abspath(args.checkpoint))
     output_path = os.path.abspath(args.output)
     calib_path = os.path.abspath(args.calib_data) if args.calib_data != "" else ""
 
-    if args.save_state_dict and args.state_dict_output.strip() == "":
-        state_dict_output_path = default_state_dict_output_path(output_path)
-    elif args.state_dict_output.strip() != "":
-        state_dict_output_path = os.path.abspath(args.state_dict_output)
-    else:
-        state_dict_output_path = ""
+    ensure_parent_dir(output_path)
 
-    print(f"[1/5] Load float model from: {checkpoint_path}")
-    model_fp32 = load_float_model(config_path, checkpoint_path)
+    print(f"[1/5] Load and check ONNX model: {model_path}")
+    model = onnx.load(model_path)
+    onnx.checker.check_model(model)
+    print("      ONNX model check passed")
 
-    print("[2/5] Float model forward check...")
-    fp32_shape = quick_forward_check(model_fp32, args.batch_size)
-    print(f"      pred_boxes shape(fp32): {fp32_shape}")
+    print("[2/5] Build runtime session and baseline benchmark...")
+    fp32_sess = create_session(model_path)
+    fp32_latency = benchmark_latency_ms(
+        fp32_sess,
+        batch_size=args.batch_size,
+        warmup_iters=args.warmup_iters,
+        bench_iters=args.bench_iters,
+    )
+    fp32_size = file_size_mb(model_path)
 
-    print("[3/5] Apply PTQ...")
+    print("[3/5] Apply ONNX quantization...")
     if args.mode == "dynamic":
-        model_int8 = quantize_dynamic_linear(model_fp32)
-        quant_name = "dynamic_int8_linear"
+        quantize_dynamic(
+            model_input=model_path,
+            model_output=output_path,
+            weight_type=QuantType.QInt8,
+        )
+        quant_name = "onnx_dynamic_int8"
     else:
-        calibration_batches = load_calibration_batches(
-            calib_path,
+        calib_samples = build_calibration_samples(
+            fp32_sess,
+            calib_path=calib_path,
             calib_batches=args.calib_batches,
             batch_size=args.batch_size,
         )
-        print(f"      static calibration batches: {len(calibration_batches)}")
-        model_int8 = quantize_static_fx(
-            model_fp32,
-            backend=args.backend,
-            calibration_batches=calibration_batches,
+        print(f"      static calibration samples: {len(calib_samples)}")
+        reader = NumpyCalibrationReader(calib_samples)
+        quantize_static(
+            model_input=model_path,
+            model_output=output_path,
+            calibration_data_reader=reader,
+            quant_format=QuantFormat.QDQ,
+            activation_type=QuantType.QUInt8,
+            weight_type=QuantType.QInt8,
         )
-        quant_name = f"static_fx_int8_{args.backend}"
+        quant_name = "onnx_static_int8_qdq"
 
-    print("[4/5] Quantized model forward check + benchmark...")
-    int8_shape = quick_forward_check(model_int8, args.batch_size)
-    print(f"      pred_boxes shape(int8): {int8_shape}")
-
-    fp32_latency = benchmark_latency_ms(
-        model_fp32,
-        batch_size=args.batch_size,
-        warmup_iters=args.warmup_iters,
-        bench_iters=args.bench_iters,
-    )
+    print("[4/5] Quantized benchmark...")
+    int8_sess = create_session(output_path)
     int8_latency = benchmark_latency_ms(
-        model_int8,
+        int8_sess,
         batch_size=args.batch_size,
         warmup_iters=args.warmup_iters,
         bench_iters=args.bench_iters,
     )
+    int8_size = file_size_mb(output_path)
+
     speedup = fp32_latency / max(int8_latency, 1e-9)
+    ratio = fp32_size / max(int8_size, 1e-9)
+
     print(f"      latency fp32: {fp32_latency:.3f} ms")
     print(f"      latency int8: {int8_latency:.3f} ms")
     print(f"      speedup: {speedup:.3f}x")
+    print(f"      model size fp32: {fp32_size:.2f} MB")
+    print(f"      model size int8: {int8_size:.2f} MB")
+    print(f"      compression ratio: {ratio:.3f}x")
 
-    fp32_size_bytes = bytes_of_torch_obj(model_fp32.state_dict())
-    int8_size_bytes = bytes_of_torch_obj(model_int8.state_dict())
-    compress = fp32_size_bytes / max(int8_size_bytes, 1)
-    print(f"      state_dict size fp32: {format_mb(fp32_size_bytes)}")
-    print(f"      state_dict size int8: {format_mb(int8_size_bytes)}")
-    print(f"      compression ratio: {compress:.3f}x")
+    print("[5/5] Done")
+    print(f"      quantization: {quant_name}")
+    print(f"      output: {output_path}")
 
-    print("[5/5] Save outputs...")
-    meta = {
-        "config": config_path,
-        "checkpoint": checkpoint_path,
-        "quantization": quant_name,
-        "test_type": cfg.TEST.TYPE,
-        "batch_size": args.batch_size,
-        "benchmark": {
-            "fp32_latency_ms": fp32_latency,
-            "int8_latency_ms": int8_latency,
-            "speedup": speedup,
-        },
-        "size": {
-            "fp32_state_dict_bytes": fp32_size_bytes,
-            "int8_state_dict_bytes": int8_size_bytes,
-            "compression_ratio": compress,
-        },
-    }
-
-    save_outputs(
-        output_path=output_path,
-        state_dict_output_path=state_dict_output_path,
-        save_state_dict=args.save_state_dict,
-        model=model_int8,
-        meta=meta,
-    )
+    if args.save_state_dict or args.state_dict_output != "":
+        print("      note: --save-state-dict/--state-dict-output are ignored in ONNX-only mode")
 
 
 if __name__ == "__main__":
