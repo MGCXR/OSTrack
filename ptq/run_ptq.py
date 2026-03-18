@@ -1,7 +1,7 @@
 import argparse
 import os
 import sys
-
+import onnx
 import torch
 
 
@@ -105,7 +105,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def load_float_model(config_path, checkpoint_path):
+def load_float_model_pytorch(config_path, checkpoint_path):
     update_config_from_file(config_path)
     model = build_test(cfg, training=False)
 
@@ -121,6 +121,21 @@ def load_float_model(config_path, checkpoint_path):
     model.eval()
     return model
 
+def load_float_model_onnx(config_path, checkpoint_path):
+    model = onnx.load(checkpoint_path)
+
+    # 检查模型是否合法
+    onnx.checker.check_model(model)
+
+    print("ONNX模型加载成功")
+    print("模型路径:", checkpoint_path)
+
+    return model
+def load_float_model(config_path, checkpoint_path):
+    if checkpoint_path.endswith(".onnx"):
+        return load_float_model_onnx(config_path, checkpoint_path)
+    else:
+        return load_float_model_pytorch(config_path, checkpoint_path)
 
 def resolve_checkpoint_path(checkpoint_path: str) -> str:
     if os.path.isfile(checkpoint_path):

@@ -15,7 +15,7 @@ def parse_args():
     parser.add_argument(
         "--checkpoint",
         type=str,
-        default="output/checkpoints/train/test/vitb_256_mae_ce_32x4_ep300_hybrid_hw_mf_co",
+        default="convert/test_mf/models/output.onnx",
         help="Path to checkpoint file or directory.",
     )
     parser.add_argument(
@@ -125,7 +125,7 @@ def main():
     args = parse_args()
 
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    ptq_script = os.path.join(project_root, "ptq", "ptq.py")
+    ptq_script = os.path.join(project_root, "ptq", "run_ptq.py")
 
     if not os.path.isfile(ptq_script):
         raise FileNotFoundError(f"PTQ script not found: {ptq_script}")
