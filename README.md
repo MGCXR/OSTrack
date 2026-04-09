@@ -25,7 +25,7 @@ python tracking/profile_model.py --script test --config vitb_256_mae_ce_32x4_ep3
 ## analysis
 python tracking/analysis_results.py
 
-##tensorboard
+## tensorboard
 tensorboard --logdir=tensorboard/train/test
 
 
