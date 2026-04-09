@@ -51,9 +51,9 @@ MODEL:
   EXTRA_MERGER: False
   RETURN_INTER: False
   BACKBONE:
-    TYPE: vit_hybrid_patch16_224_ce_mf
+    TYPE: vit_hybrid_patch16_224_hw_mf
     STRIDE: 16
-    CE_LOC: [3, 6, 8]
+    CE_LOC: [3, 6, 9]
     CE_KEEP_RATIO: [0.7, 0.7, 0.7]
     CE_TEMPLATE_RANGE: 'CTR_POINT'  # choose between ALL, CTR_POINT, CTR_REC, GT_BOX
   HEAD:
