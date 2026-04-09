@@ -83,13 +83,13 @@ def parse_args():
     parser.add_argument(
         "--warmup-iters",
         type=int,
-        default=20,
+        default=100,
         help="Warmup iterations for latency benchmark.",
     )
     parser.add_argument(
         "--bench-iters",
         type=int,
-        default=80,
+        default=300,
         help="Measured iterations for latency benchmark.",
     )
     parser.add_argument(
@@ -289,7 +289,8 @@ def main():
     print(f"      model size fp32: {fp32_size:.2f} MB")
     print(f"      model size int8: {int8_size:.2f} MB")
     print(f"      compression ratio: {ratio:.3f}x")
-
+    print(f"      fp32 FPS (1/batch): {1000.0 / fp32_latency:.2f}")
+    print(f"      int8 FPS (1/batch): {1000.0 / int8_latency:.2f}")
     print("[5/5] Done")
     print(f"      quantization: {quant_name}")
     print(f"      output: {output_path}")

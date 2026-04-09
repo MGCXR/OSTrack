@@ -37,22 +37,42 @@ inputs_dict={'template': template_np, 'search': search_np, 'template_event': tem
 
 # model_file = 'convert/test_mf/models/Test_ep0300.onnx'
 model_file = 'convert/test_mf/models/output.onnx'
+# model_file = 'convert/test_mf/models/output_quantized.onnx'
 target = 'apu'
 dtype = 'float32'
 
+
+
+
+
+
+# dataset = []
+# for i in range(16):
+#     dataset.append({
+#         'template': np.random.rand(1, 3, 128, 128).astype(np.float32)/255.,
+#         'search': np.random.rand(1, 3, 256, 256).astype(np.float32)/255.,
+#         'template_event': np.random.rand(1, 3, 128, 128).astype(np.float32)/255.,
+#         'search_event': np.random.rand(1, 3, 256, 256).astype(np.float32)/255.,
+#     })
+# qconf = lyn.qconf(dataset,wscale='max')
+# # qconf = None
 # # # 转换模型，获取引擎
 # r_engine = convert_model(model_file, 
 #                          inputs_dict={'template':(1,3,128,128),'search':(1,3,256,256),'template_event':(1,3,128,128),'search_event':(1,3,256,256)},
 #                          target=target,
-#                          path='./convert/test_mf/tmp_net/onnx/', 
+#                          path='./convert/test_mf/tmp_net/onnx1/', 
 #                          model_type='ONNX', 
+#                          qconf=qconf,
 #                          build_mode="auto",
-#                          profiler=True,
+#                          profiler=False,
 #                          serialize=False)
 
 
-# model = onnx.load(model_file)
+model = onnx.load(model_file)
+params = sum(np.prod(n.dims) for n in model.graph.initializer)
 
+print("Params:", params)
+print("Params(M):", params/1e6)
 # ops = [node.op_type for node in model.graph.node]
 # print("算子数量统计：")
 # for k, v in Counter(ops).items():
@@ -70,10 +90,10 @@ r_engine = lyn.load(path='./convert/test_mf/tmp_net/onnx/Net_0', device=0)
 # def run_case():
 #     r_engine.run(template=template_np, search=search_np, template_event=template_event_np, search_event=search_event_np)
 # run_case()
-
+# for _ in range(5000):
 r_engine.run(template=template_np, search=search_np, template_event=template_event_np, search_event=search_event_np)
 output = r_engine.get_output()
-
+# print("输出结果：", output[0])
 # np.save('./convert/result/output_0_apu.npy', output[0])
 # np.save('./convert/result/output_0_onnx.npy', output_onnx[0])
 # np.save('./convert/result/output_1_apu.npy', output[1])

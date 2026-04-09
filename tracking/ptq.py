@@ -21,7 +21,7 @@ def parse_args():
     parser.add_argument(
         "--output",
         type=str,
-        default="ptq/quantized_test_dynamic.pth",
+        default="convert/test_mf/models/output_quantized.onnx",
         help="Path to save quantized model object.",
     )
     parser.add_argument(
@@ -39,7 +39,7 @@ def parse_args():
         "--mode",
         type=str,
         choices=["dynamic", "static"],
-        default="dynamic",
+        default="static",
         help="Quantization mode.",
     )
     parser.add_argument(
